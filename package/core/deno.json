@@ -1,0 +1,13 @@
+{
+	"name": "@remotify/core",
+	"exports": {
+		".": "./main.ts",
+		"./lite": "./lite.ts",
+		"./type": "./type.ts"
+	},
+	"imports": {
+		"@std/assert": "jsr:@std/assert@1",
+		"hono": "npm:hono@^4.9.4",
+		"@msgpack/msgpack": "npm:@msgpack/msgpack@^3.1.2"
+	}
+}

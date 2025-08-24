@@ -1,0 +1,21 @@
+{
+	"workspace": [
+		"./package/*"
+	],
+	"tasks": {
+		"dev": "deno run --watch main.ts"
+	},
+	"imports": {
+		"@msgpack/msgpack": "npm:@msgpack/msgpack@^3.1.2",
+		"@std/assert": "jsr:@std/assert@1",
+		"fp-ts": "npm:fp-ts@^2.16.11",
+		"hono": "npm:hono@^4.9.4"
+	},
+	"fmt": {
+		"useTabs": true,
+		"useBraces": "always",
+		"indentWidth": 4,
+		"newLineKind": "lf",
+		"trailingCommas": "onlyMultiLine"
+	}
+}

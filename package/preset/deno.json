@@ -1,0 +1,7 @@
+{
+	"name": "@remotify/preset",
+	"exports": "./mod.ts",
+	"imports": {
+		"bson": "npm:bson@^6.10.4"
+	}
+}
