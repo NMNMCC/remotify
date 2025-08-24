@@ -37,7 +37,7 @@ export type RemotifyController<
 
 export type RemotifyResponse =
 	| { ok: true; v: any }
-	| { ok: false; e: { n: string; m: string } };
+	| { ok: false; e: { n: string; m: string; s?: string } };
 
 export const remotify = <
 	TObject extends Record<string, any>,
@@ -99,60 +99,108 @@ export const remotify = <
 				keys: (...as: TTransmitterArgs) => go({ o: "keys" }, ...as),
 			} as RemotifyController<TObject, TTransmitterArgs>;
 		},
-		remote: (obj: TObject, error?: (err: unknown) => void) =>
-			lite.remote<RemotifyRequest, RemotifyResponse>(
-				async (req) => {
-					try {
-						switch (req.o) {
-							case "get": {
-								const v = obj[req.p as keyof TObject];
-								return { ok: true, v };
-							}
-							case "set": {
-								(obj as any)[req.p] = req.v;
-								return {
-									ok: true,
-									v: (obj as any)[req.p],
-								};
-							}
-							case "call": {
-								const fn = obj[req.p as keyof TObject];
-								if (typeof fn !== "function") {
-									throw new TypeError(
-										`'${req.p}' is not callable`,
-									);
-								}
-								const result = await wait((fn as any)(
-									...(req as any).a ?? [],
-								));
-								return { ok: true, v: result };
-							}
-							case "delete": {
-								return {
-									ok: true,
-									v: (delete (obj as any)[req.p]),
-								};
-							}
-							case "keys": {
-								return {
-									ok: true,
-									v: Object.keys(obj),
-								};
-							}
-							default:
-								throw new Error("unknown op");
+		remote: (
+			obj: TObject,
+			error?: (err: unknown) => void,
+			options?: {
+				allowedProperties?: (keyof TObject)[];
+				allowedMethods?: (keyof TObject)[];
+			},
+		) => lite.remote<RemotifyRequest, RemotifyResponse>(
+			async (req) => {
+				try {
+					const checkPropertyAccess = (
+						prop: string,
+						type: "property" | "method",
+					) => {
+						const allowed = type === "method"
+							? options?.allowedMethods
+							: options?.allowedProperties;
+
+						if (
+							allowed && !allowed.includes(prop as keyof TObject)
+						) {
+							throw new Error(
+								`Access denied: ${type} '${prop}' not in allowlist`,
+							);
 						}
-					} catch (err) {
-						error?.(err);
-						return {
-							ok: false,
-							e: {
-								n: (err as any)?.name ?? "Error",
-								m: (err as any)?.message ?? String(err),
-							},
-						};
+					};
+
+					switch (req.o) {
+						case "get": {
+							// Basic property validation
+							if (!req.p || typeof req.p !== "string") {
+								throw new TypeError("Invalid property name");
+							}
+							checkPropertyAccess(req.p, "property");
+							const v = obj[req.p as keyof TObject];
+							return { ok: true, v };
+						}
+						case "set": {
+							// Basic property validation
+							if (!req.p || typeof req.p !== "string") {
+								throw new TypeError("Invalid property name");
+							}
+							checkPropertyAccess(req.p, "property");
+							(obj as any)[req.p] = req.v;
+							return {
+								ok: true,
+								v: (obj as any)[req.p],
+							};
+						}
+						case "call": {
+							// Basic property validation
+							if (!req.p || typeof req.p !== "string") {
+								throw new TypeError("Invalid property name");
+							}
+							checkPropertyAccess(req.p, "method");
+							const fn = obj[req.p as keyof TObject];
+							if (typeof fn !== "function") {
+								throw new TypeError(
+									`'${req.p}' is not callable`,
+								);
+							}
+							// Validate arguments array
+							const args = Array.isArray((req as any).a)
+								? (req as any).a
+								: [];
+							const result = await wait((fn as any)(...args));
+							return { ok: true, v: result };
+						}
+						case "delete": {
+							// Basic property validation
+							if (!req.p || typeof req.p !== "string") {
+								throw new TypeError("Invalid property name");
+							}
+							checkPropertyAccess(req.p, "property");
+							return {
+								ok: true,
+								v: (delete (obj as any)[req.p]),
+							};
+						}
+						case "keys": {
+							return {
+								ok: true,
+								v: Object.keys(obj),
+							};
+						}
+						default:
+							throw new Error("unknown op");
 					}
-				},
-			),
+				} catch (err) {
+					error?.(err);
+					return {
+						ok: false,
+						e: {
+							n: (err as any)?.name ?? "Error",
+							m: (err as any)?.message ?? String(err),
+							// Preserve error stack in development (be careful in production)
+							...(typeof (err as any)?.stack === "string" &&
+								{ s: (err as any).stack }),
+						},
+					};
+				}
+			},
+		),
 	};
 };

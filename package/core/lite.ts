@@ -37,7 +37,20 @@ export const remotify = <
 			handler: (req: WithID<TRequest>) => MaybePromise<TResponse>,
 		) =>
 		async (payload: any): Promise<any> => {
+			// Basic input validation
+			if (payload == null) {
+				throw new Error("Invalid payload: null or undefined");
+			}
+
 			const req: WithID<TRequest> = await codec.deserializer(payload);
+
+			// Validate correlation ID exists
+			if (!req || typeof req.i !== "string" || !req.i.trim()) {
+				throw new Error(
+					"Invalid request: missing or invalid correlation ID",
+				);
+			}
+
 			const resp = await handler(req);
 			return codec.serializer({ ...resp, i: req.i });
 		},
