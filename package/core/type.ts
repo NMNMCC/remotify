@@ -1,5 +1,5 @@
 // deno-lint-ignore-file no-explicit-any
-export type MaybePromise<T> = T | Promise<MaybePromise<T>>;
+export type MaybePromise<T> = T | Promise<T>;
 
 export type Wait<T extends MaybePromise<any>> = T extends Promise<infer U>
 	? Wait<U>

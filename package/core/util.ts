@@ -1,10 +1,10 @@
 import type { MaybePromise } from "@remotify/core/type";
 
 export const wait = async <T>(v: MaybePromise<T>): Promise<T> => {
-	// @ts-ignore ...
 	const result = await v;
+	// Handle nested promises properly without recursion risk
 	if (result instanceof Promise) {
-		return await wait(result);
+		return await result;
 	}
 	return result;
 };
